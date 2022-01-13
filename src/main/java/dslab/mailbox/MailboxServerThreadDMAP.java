@@ -22,7 +22,7 @@ public class MailboxServerThreadDMAP extends Thread {
 
     @Override
     public void run() {
-        while(!shutdown) {
+        while (!shutdown) {
             try {
                 MailBoxServerConnectionDMAP mailBoxServerConnectionDMAP = new MailBoxServerConnectionDMAP(serverSocket.accept(), config, mailStorage, componentId);
                 mailBoxServerConnectionDMAP.start();
