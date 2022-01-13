@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Mail {
 
-    public Mail (List<String> recipients, String sender, String subject, String data, List<String> domains) {
+    public Mail (List<String> recipients, String sender, String subject, String data, List<String> domains, String hash) {
         this.recipients = recipients;
         this.sender = sender;
         this.subject = subject;
@@ -45,13 +45,14 @@ public class Mail {
     public void setData(String data) {
         this.data = data;
     }
-    public List<String> getDomains() {
-        return domains;
-    }
 
-    public void setDomains(List<String> domains) {
-        this.domains = domains;
-    }
+    public List<String> getDomains() { return domains; }
+
+    public void setDomains(List<String> domains) { this.domains = domains; }
+
+    public String getHash() { return hash; }
+
+    public void setHash(String hash) { this.hash = hash; }
 
     public String getRecipientsAsString() {
         StringBuilder recipients = new StringBuilder();
@@ -71,6 +72,7 @@ public class Mail {
                 ", subject='" + subject + '\'' +
                 ", data='" + data + '\'' +
                 ", domains=" + domains +
+                ", hash=" + hash +
                 '}';
     }
 
@@ -93,4 +95,5 @@ public class Mail {
     private String subject;
     private String data;
     private List<String> domains;
+    private String hash;
 }

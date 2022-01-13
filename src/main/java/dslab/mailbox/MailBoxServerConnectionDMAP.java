@@ -28,7 +28,7 @@ public class MailBoxServerConnectionDMAP extends Thread {
         try {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out.println("ok DMAP");
+            out.println("ok DMAP2.0");
 
             String inputLine, outputLine;
             MailBoxDMAP mailBoxDMAP = new MailBoxDMAP(config, mailStorage);

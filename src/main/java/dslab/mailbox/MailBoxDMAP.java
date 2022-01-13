@@ -22,6 +22,8 @@ public class MailBoxDMAP {
         String trimInput = input.substring(input.indexOf(" ") + 1);
         if (input.startsWith("login"))
             return login(trimInput);
+        else if (input.startsWith("startsecure"))
+            return startSecure();
         else if (input.startsWith("list"))
             return list();
         else if (input.startsWith("show"))
@@ -59,6 +61,10 @@ public class MailBoxDMAP {
         return response;
     }
 
+    private List<String> startSecure() {
+        return null; //TODO
+    }
+
     private List<String> list() {
         List<String> response = new ArrayList<>();
         if (!isLoggedIn) {
@@ -72,12 +78,13 @@ public class MailBoxDMAP {
             mails.setLength(0);
             Mail mail = entry.getValue();
             if (mail.getRecipients().contains(user + "@" + domain)) {
-                mails.append(entry.getKey()).append(" ").append(mail.getSender()).append(" ").append(mail.getSubject());
+                mails.append(entry.getKey()).append(" ").append(mail.getSender()).append(" ").append(mail.getSubject()).append("\n");
                 response.add(mails.toString());
             }
         }
         if (mails.toString().isEmpty())
             response.add("error... There are no messages available!");
+        mails.append("ok");
         return response;
     }
 
@@ -102,6 +109,8 @@ public class MailBoxDMAP {
             response.add("to " + mail.getRecipientsAsString());
             response.add("subject " + mail.getSubject());
             response.add("data " + mail.getData());
+            response.add("hash " + mail.getHash());
+            response.add("ok");
         } else response.add("There are no mails concerning you with the given id.");
         return response;
     }
