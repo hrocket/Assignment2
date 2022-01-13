@@ -22,8 +22,6 @@ public class MailBoxDMAP {
         String trimInput = input.substring(input.indexOf(" ") + 1);
         if (input.startsWith("login"))
             return login(trimInput);
-        else if (input.startsWith("startsecure"))
-            return startSecure();
         else if (input.startsWith("list"))
             return list();
         else if (input.startsWith("show"))
@@ -62,7 +60,9 @@ public class MailBoxDMAP {
     }
 
     private List<String> startSecure() {
-        return null; //TODO
+        List<String> response = new ArrayList<>();
+        response.add("ok");
+        return response;
     }
 
     private List<String> list() {

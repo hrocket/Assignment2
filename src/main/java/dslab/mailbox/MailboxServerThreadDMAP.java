@@ -12,18 +12,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MailboxServerThreadDMAP extends Thread {
 
-    public MailboxServerThreadDMAP(ServerSocket serverSocket, Config config, ConcurrentHashMap<Integer, Mail> mailStorage) {
+    public MailboxServerThreadDMAP(ServerSocket serverSocket, Config config, ConcurrentHashMap<Integer, Mail> mailStorage, String componentId) {
         this.serverSocket = serverSocket;
         this.config = config;
         this.mailStorage = mailStorage;
         this.connections = new ArrayList<>();
+        this.componentId = componentId;
     }
 
     @Override
     public void run() {
         while(!shutdown) {
             try {
-                MailBoxServerConnectionDMAP mailBoxServerConnectionDMAP = new MailBoxServerConnectionDMAP(serverSocket.accept(), config, mailStorage);
+                MailBoxServerConnectionDMAP mailBoxServerConnectionDMAP = new MailBoxServerConnectionDMAP(serverSocket.accept(), config, mailStorage, componentId);
                 mailBoxServerConnectionDMAP.start();
                 connections.add(mailBoxServerConnectionDMAP);
             } catch (SocketException e) {
@@ -48,4 +49,5 @@ public class MailboxServerThreadDMAP extends Thread {
     private ConcurrentHashMap<Integer, Mail> mailStorage;
     private boolean shutdown;
     private List<MailBoxServerConnectionDMAP> connections;
+    private String componentId;
 }

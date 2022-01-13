@@ -23,6 +23,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
      */
     public MailboxServer(String componentId, Config config, InputStream in, PrintStream out) {
         this.config = config;
+        this.componentId = componentId;
         this.mailStorage = new ConcurrentHashMap<>();
         this.shell = new Shell(in, out);
         this.shell.register(this);
@@ -43,7 +44,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
 
             mailboxServerThreadDMTP = new MailboxServerThreadDMTP(serverSocketDMTP, mailStorage, config);
             mailboxServerThreadDMTP.start();
-            mailboxServerThreadDMAP = new MailboxServerThreadDMAP(serverSocketDMAP, config, mailStorage);
+            mailboxServerThreadDMAP = new MailboxServerThreadDMAP(serverSocketDMAP, config, mailStorage, componentId);
             mailboxServerThreadDMAP.start();
             shell.run();
         } catch (IOException e) {
@@ -85,4 +86,5 @@ public class MailboxServer implements IMailboxServer, Runnable {
     private MailboxServerThreadDMTP mailboxServerThreadDMTP;
     private MailboxServerThreadDMAP mailboxServerThreadDMAP;
     private Shell shell;
+    private String componentId;
 }
