@@ -1,14 +1,14 @@
 package dslab.nameserver;
 
 import at.ac.tuwien.dsg.orvell.Shell;
+import at.ac.tuwien.dsg.orvell.StopShellException;
+import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.util.Config;
 
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -38,7 +38,7 @@ public class Nameserver implements INameserver {
         this.out = out;
         this.shell = new Shell(in, out);
         this.shell.register(this);
-        this.shell.setPrompt(componentId + " ");
+        this.shell.setPrompt(componentId + ": ");
         this.nameserverRemote = new NameserverRemote();
     }
 
@@ -67,19 +67,56 @@ public class Nameserver implements INameserver {
         shell.run();
     }
 
+    @Command
     @Override
     public void nameservers() {
-        // TODO
+        if(!config.containsKey("domain")) {
+            out.print(((INameserverGetter) nameserverRemote).getNameservers());
+        } else {
+            try {
+                out.print(((INameserverGetter) root.getNameserver(config.getString("domain"))).getNameservers());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
+    @Command
     @Override
     public void addresses() {
-        // TODO
+        if (!config.containsKey("domain")) {
+            out.print(((INameserverGetter) nameserverRemote).getAddresses());
+        } else {
+            try {
+                out.print(((INameserverGetter) root.getNameserver(config.getString("domain"))).getAddresses());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
+    @Command
     @Override
     public void shutdown() {
-        // TODO
+        if(!config.containsKey("domain")) {
+            try {
+                UnicastRemoteObject.unexportObject(this.nameserverRemote, true);
+            } catch (NoSuchObjectException e) {
+                e.printStackTrace();
+            }
+            try {
+                registry.unbind(config.getString("root_id"));
+                UnicastRemoteObject.unexportObject(registry, true);
+            } catch (NotBoundException e) {
+                e.printStackTrace();
+            } catch (NoSuchObjectException e) {
+                e.printStackTrace();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+        //close shell
+        throw new StopShellException();
     }
 
     public static void main(String[] args) throws Exception {
