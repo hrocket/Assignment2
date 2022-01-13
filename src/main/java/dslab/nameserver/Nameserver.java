@@ -1,12 +1,28 @@
 package dslab.nameserver;
 
+import at.ac.tuwien.dsg.orvell.Shell;
 import dslab.ComponentFactory;
 import dslab.util.Config;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 
 public class Nameserver implements INameserver {
+
+    private String componentId;
+    private Config config;
+    private PrintStream out;
+    private Shell shell;
+    private Registry registry;
+    private INameserverRemote nameserverRemote;
+    private INameserverRemote root;
+
 
     /**
      * Creates a new server instance.
@@ -17,12 +33,38 @@ public class Nameserver implements INameserver {
      * @param out the output stream to write console output to
      */
     public Nameserver(String componentId, Config config, InputStream in, PrintStream out) {
-        // TODO
+        this.componentId = componentId;
+        this.config = config;
+        this.out = out;
+        this.shell = new Shell(in, out);
+        this.shell.register(this);
+        this.shell.setPrompt(componentId + " ");
+        this.nameserverRemote = new NameserverRemote();
     }
 
     @Override
     public void run() {
-        // TODO
+        try {
+            //Only the config of the root ns does not include the key "domain"
+            if (!config.containsKey("domain")) {
+                this.registry = LocateRegistry.createRegistry(config.getInt("registry.port"));
+                INameserverRemote remote = (INameserverRemote) UnicastRemoteObject.exportObject(this.nameserverRemote, 0);
+                //bind the stub of the remote Object to the binding name of the config
+                registry.bind(config.getString("root_id"), remote);
+            } else {
+                registry = LocateRegistry.getRegistry(config.getString("registry.host"), config.getInt("registry.port"));
+                root = (INameserverRemote) registry.lookup(config.getString("root_id"));
+                root.registerNameserver(config.getString("domain"), nameserverRemote);
+            }
+        } catch (RemoteException | AlreadyBoundException | NotBoundException e) {
+            e.printStackTrace();
+        } catch (AlreadyRegisteredException e) {
+            e.printStackTrace();
+        } catch (InvalidDomainException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Server " + componentId + " is up!");
+        shell.run();
     }
 
     @Override
