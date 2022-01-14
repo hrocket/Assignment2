@@ -1,5 +1,6 @@
 package dslab.transfer;
 
+import dslab.nameserver.INameserverRemote;
 import dslab.util.Config;
 
 import java.io.IOException;
@@ -12,13 +13,14 @@ import java.util.concurrent.Executors;
 
 public class TransferServerThread extends Thread {
 
-    public TransferServerThread(ServerSocket serverSocket, Config config, String componentId) {
+    public TransferServerThread(ServerSocket serverSocket, Config config, String componentId, INameserverRemote root) {
         this.serverSocket = serverSocket;
         this.config = config;
         this.threatPool = Executors.newFixedThreadPool(3);
         this.componentId = componentId;
         this.shutdown = false;
         this.connections = new ArrayList<>();
+        this.root = root;
     }
 
     @Override
@@ -26,7 +28,7 @@ public class TransferServerThread extends Thread {
         while (!shutdown) {
             try {
                 //Creates new Thread everytime a socket gets accepted
-                TransferServerConnection transferServerConnection = new TransferServerConnection(serverSocket.accept(), config, componentId);
+                TransferServerConnection transferServerConnection = new TransferServerConnection(serverSocket.accept(), config, componentId, root);
                 threatPool.execute(transferServerConnection);
                 connections.add(transferServerConnection);
             } catch (SocketException e) {
@@ -55,5 +57,6 @@ public class TransferServerThread extends Thread {
     private String componentId;
     private volatile boolean shutdown;
     private List<TransferServerConnection> connections;
+    private INameserverRemote root;
 
 }

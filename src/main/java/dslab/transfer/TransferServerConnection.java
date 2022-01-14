@@ -3,6 +3,7 @@ package dslab.transfer;
 
 import at.ac.tuwien.dsg.orvell.StopShellException;
 
+import dslab.nameserver.INameserverRemote;
 import dslab.util.Config;
 import dslab.util.DMTP;
 
@@ -15,12 +16,13 @@ import java.util.concurrent.Executors;
 
 public class TransferServerConnection extends Thread {
 
-    public TransferServerConnection(Socket socket, Config config, String componentId) {
+    public TransferServerConnection(Socket socket, Config config, String componentId, INameserverRemote root) {
         this.socket = socket;
         this.config = config;
         this.closed = false;
         this.threatPool = Executors.newFixedThreadPool(10);
         this.componentId = componentId;
+        this.root = root;
     }
 
     public void run() {
@@ -52,7 +54,7 @@ public class TransferServerConnection extends Thread {
     public String send(DMTP transferDMTP) {
         String message = transferDMTP.getMail().validateMail();
         if(message.equals("")) {
-            Runnable runnable = new TransferClientThread(transferDMTP.getMail(), this.config);
+            Runnable runnable = new TransferClientThread(transferDMTP.getMail(), this.config, root);
             threatPool.execute(runnable);
             return "ok";
         } else return message;
@@ -86,4 +88,5 @@ public class TransferServerConnection extends Thread {
     private boolean closed;
     private ExecutorService threatPool;
     private String componentId;
+    private INameserverRemote root;
 }

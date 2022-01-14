@@ -1,5 +1,6 @@
 package dslab.transfer;
 
+import dslab.nameserver.INameserverRemote;
 import dslab.util.Config;
 import dslab.util.Mail;
 import dslab.util.Pair;
@@ -9,13 +10,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingResourceException;
 
 public class TransferClientThread extends Thread {
 
-    public TransferClientThread(Mail mail, Config config) {
+    public TransferClientThread(Mail mail, Config config, INameserverRemote root) {
         this.mail = mail;
         this.config = config;
         this.domainConfig = new Config("domains");
@@ -23,11 +25,16 @@ public class TransferClientThread extends Thread {
         this.errors = new ArrayList<>();
         this.monitoringConfig = new Config("monitoring");
         this.dmtp = new ArrayList<>();
+        this.root = root;
     }
 
     public void run() {
         statistics();
-        lookupDomain((ArrayList<String>) this.mail.getRecipients());
+        try {
+            lookUpDomainsOnNameserver(this.mail.getRecipients());
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
         initializeProtocol();
         sendMail();
         //if error handling failed, discard error messages
@@ -68,27 +75,28 @@ public class TransferClientThread extends Thread {
         }
     }
 
-    public void lookupDomain(ArrayList<String> recipients) {
-        ArrayList<String> toRemove = new ArrayList<>();
-        this.domains.clear();
-        for (String recipient : recipients) {
-            if (recipient.contains("@")) {
-                String domain = recipient.split("@")[1];
-                try {
-                    this.domains.add(domainConfig.getString(domain));
-                } catch (MissingResourceException e) {
-                    toRemove.add(recipient);
+    public void lookUpDomainsOnNameserver(List<String> recipients) throws RemoteException {
+        INameserverRemote remote = root;
+        List<String> toRemove = new ArrayList<>();
+        for (String recipient: recipients) {
+            String[] domainParts = recipient.split("\\.");
+            if (domainParts.length > 1) {
+                for (int i = domainParts.length-1; i > 0; i--) {
+                    remote = remote.getNameserver(domainParts[i]);
                 }
+            }
+            String address = remote.lookup(domainParts[0]);
+            if (address != null) {
+                this.domains.add(address);
             } else {
                 toRemove.add(recipient);
             }
+            recipients.removeAll(toRemove);
+            this.mail.setRecipients(recipients);
+            this.mail.setDomains(this.domains);
         }
-        recipients.removeAll(toRemove);
-        this.mail.setRecipients(recipients);
-        this.mail.setDomains(this.domains);
-
-        for (String recipient : toRemove) {
-            errors.add("Could not find recipient with domain: " + recipient);
+        for (String invalidRecipient : toRemove) {
+            errors.add("Could not find recipient with domain: " + invalidRecipient);
         }
     }
 
@@ -163,4 +171,5 @@ public class TransferClientThread extends Thread {
     private List<String> errors;
     private boolean first;
     private Config domainConfig;
+    private INameserverRemote root;
 }

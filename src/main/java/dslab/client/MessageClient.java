@@ -144,7 +144,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                notifyShell("ERROR123", true);
+                notifyShell("ERROR", true);
             }
 
             // Login with the credentials from the config-file
@@ -178,7 +178,7 @@ public class MessageClient implements IMessageClient, Runnable {
             // Convert back to String-format
             return Base64.getEncoder().encodeToString(msg_binary_encrypted);
         } catch (Exception e) {
-            System.out.println("ERRORHere");
+            System.out.println("ERROR");
         }
         return null;
     }
@@ -195,7 +195,7 @@ public class MessageClient implements IMessageClient, Runnable {
             // Convert back to String-format
             return Base64.getEncoder().encodeToString(msg_binary_encrypted);
         } catch (Exception e) {
-            System.out.println("ERRORThere");
+            System.out.println("ERROR");
         }
         return null;
     }
@@ -219,7 +219,7 @@ public class MessageClient implements IMessageClient, Runnable {
             return new String(msg_binary_decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("ERROR234");
+            System.out.println("ERROR");
         }
         return null;
     }

@@ -48,7 +48,7 @@ public class TransferServer implements ITransferServer, Runnable {
             serverSocket = new ServerSocket(port);
             shell.out().println("Listening to port: " + port);
             //Create new transferServer thread to listen to server socket
-            transferServerThread = new TransferServerThread(serverSocket, config, componentId);
+            transferServerThread = new TransferServerThread(serverSocket, config, componentId, root);
             transferServerThread.start();
             shell.run();
         } catch (IOException e) {
