@@ -350,7 +350,7 @@ public class MessageClient implements IMessageClient, Runnable {
             do {
                 this.transferConnection.send(fields[counter++]);
                 response = this.transferConnection.readLine();
-            } while (!dmtpHandler.processTransfer(response).equals("error protocol error"));
+            } while (!dmtpHandler.processTransfer(response, mail).equals("error protocol error"));
 
             // Counter increases for each field, if he is not equal to the number of fields, it means that an error has occured
             if (counter < (fields.length - 1)) {
