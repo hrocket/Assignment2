@@ -344,12 +344,14 @@ public class MessageClient implements IMessageClient, Runnable {
             String[] fields = {"begin", "from " + from, "to " + to, "subject " + subject,
                     "data " + data, "hash " + mail.getHash(), "send"};
             int counter = 0;
-            String response;
+            String response = "";
 
             // Send commands one by one, we stop as soon as an error occurs
             do {
-                this.transferConnection.send(fields[counter++]);
-                response = this.transferConnection.readLine();
+                if(counter < 7) {
+                    this.transferConnection.send(fields[counter++]);
+                    response = this.transferConnection.readLine();
+                }
             } while (!dmtpHandler.processTransfer(response, mail).equals("error protocol error"));
 
             // Counter increases for each field, if he is not equal to the number of fields, it means that an error has occured
@@ -362,6 +364,7 @@ public class MessageClient implements IMessageClient, Runnable {
             this.transferConnection.close();
 
         } catch (Exception e) {
+            e.printStackTrace();
             // Do
         }
     }

@@ -79,13 +79,14 @@ public class TransferClientThread extends Thread {
         INameserverRemote remote = root;
         List<String> toRemove = new ArrayList<>();
         for (String recipient: recipients) {
-            String[] domainParts = recipient.split("\\.");
+            String[] domain = recipient.split("@");
+            String[] domainParts = domain[1].split("\\.");
             if (domainParts.length > 1) {
                 for (int i = domainParts.length-1; i > 0; i--) {
                     remote = remote.getNameserver(domainParts[i]);
                 }
             }
-            String address = remote.lookup(domainParts[0]);
+            String address = remote.lookup(domain[0]);
             if (address != null) {
                 this.domains.add(address);
             } else {

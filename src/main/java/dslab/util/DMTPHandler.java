@@ -101,27 +101,27 @@ public class DMTPHandler {
                 counter++;
                 return "begin";
 
-            } else if (msg.equals("ok") && counter == 1) {
+            } else if (msg.contains("ok") && counter == 1) {
 
                 counter++;
                 return "to " + mail.getRecipients();
 
-            } else if (msg.equals("ok 1") && counter == 2) {
+            } else if (msg.contains("ok") && counter == 2) {
 
                 counter++;
                 return "from " + mail.getSender();
 
-            } else if (msg.equals("ok") && counter == 3) {
+            } else if (msg.contains("ok") && counter == 3) {
 
                 counter++;
                 return "data " + mail.getData();
 
-            } else if (msg.equals("ok") && counter == 4) {
+            } else if (msg.contains("ok") && counter == 4) {
 
                 counter++;
                 return "subject " + mail.getSubject();
 
-            }else if (msg.equals("ok") && counter == 5) {
+            }else if (msg.contains("ok") && counter == 5) {
 
                 counter = 0;
                 return "send";
