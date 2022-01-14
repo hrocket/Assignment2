@@ -1,10 +1,11 @@
 package dslab.nameserver;
 
+import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class NameserverRemote implements INameserverRemote, INameserverGetter {
+public class NameserverRemote implements INameserverRemote, INameserverGetter, Serializable {
 
     private ConcurrentHashMap<String, String> domains;
     private ConcurrentHashMap<String, INameserverRemote> children;

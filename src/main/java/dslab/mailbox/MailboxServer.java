@@ -1,13 +1,22 @@
 package dslab.mailbox;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.UnknownHostException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
+import dslab.nameserver.AlreadyRegisteredException;
+import dslab.nameserver.INameserverRemote;
+import dslab.nameserver.InvalidDomainException;
 import dslab.util.Config;
 import dslab.util.Mail;
 
@@ -32,6 +41,18 @@ public class MailboxServer implements IMailboxServer, Runnable {
 
     @Override
     public void run() {
+        try {
+            Registry registry = LocateRegistry.getRegistry(config.getString("registry.host"), config.getInt("registry.port"));
+            INameserverRemote root = (INameserverRemote) registry.lookup(config.getString("root_id"));
+            String domain = componentId.substring(8).replace('-', '.');
+            InetAddress ip = InetAddress.getLocalHost();
+            root.registerMailboxServer(domain, ip.getHostAddress() + ':' + config.getString("dmtp.tcp.port"));
+        } catch (RemoteException | NotBoundException | InvalidDomainException | UnknownHostException e) {
+            System.out.println(e.getMessage());
+        } catch (AlreadyRegisteredException e) {
+            System.out.println(e.getMessage());
+        }
+
         int portDMTP = config.getInt("dmtp.tcp.port");
         int portDMAP = config.getInt("dmap.tcp.port");
         shell.out().println("Mailbox Server is running...");

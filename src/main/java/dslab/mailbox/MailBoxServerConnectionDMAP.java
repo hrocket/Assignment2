@@ -34,7 +34,7 @@ public class MailBoxServerConnectionDMAP extends Thread {
 
 
             String inputLine, outputLine;
-            MailBoxDMAP mailBoxDMAP = new MailBoxDMAP(config, mailStorage);
+            MailBoxDMAP mailBoxDMAP = new MailBoxDMAP(config, mailStorage, secureConnection);
             while ((inputLine = in.readLine()) != null && !closed) {
                 List<String> response;
                 //trigger the secure connection process

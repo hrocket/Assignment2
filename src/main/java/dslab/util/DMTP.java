@@ -18,6 +18,8 @@ public abstract class DMTP {
             return subject(trimInput);
         else if(input.startsWith("data"))
             return data(trimInput);
+        else if(input.startsWith("hash"))
+            return hash(trimInput);
         else if(input.startsWith("quit"))
             return "ok bye";
         else return null;
@@ -64,6 +66,14 @@ public abstract class DMTP {
             return "error, a Message has to start with 'begin'!";
 
         this.mail.setData(input);
+        return "ok";
+    }
+
+    public String hash(String input) {
+        if (mail == null)
+            return "error, a Message has to start with 'begin'!";
+
+        this.mail.setHash(input);
         return "ok";
     }
 

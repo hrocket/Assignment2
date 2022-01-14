@@ -27,7 +27,7 @@ public class TransferServerConnection extends Thread {
         try {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out.println("ok DMTP");
+            out.println("ok DMTP2.0");
 
             String inputLine, outputLine;
             DMTP transferDMTP = new TransferDMTP();

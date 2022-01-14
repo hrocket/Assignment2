@@ -2,11 +2,16 @@ package dslab.transfer;
 
 import java.io.*;
 import java.net.ServerSocket;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 
 import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
+import dslab.nameserver.INameserverRemote;
 import dslab.util.Config;
 
 public class TransferServer implements ITransferServer, Runnable {
@@ -25,6 +30,14 @@ public class TransferServer implements ITransferServer, Runnable {
         this.shell = new Shell(in, out);
         this.shell.register(this);
         this.shell.setPrompt("");
+
+        try {
+            //Find root nameserver with registry
+            Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
+            root = (INameserverRemote) registry.lookup(config.getString("root_id"));
+        } catch (RemoteException | NotBoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -71,4 +84,5 @@ public class TransferServer implements ITransferServer, Runnable {
     private String componentId;
     private Shell shell;
     private TransferServerThread transferServerThread;
+    private INameserverRemote root;
 }

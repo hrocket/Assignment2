@@ -10,29 +10,37 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MailBoxDMAP {
 
-    public MailBoxDMAP(Config config, ConcurrentHashMap<Integer, Mail> mailStorage) {
+    public MailBoxDMAP(Config config, ConcurrentHashMap<Integer, Mail> mailStorage, SecureConnection secureConnection) {
         this.config = config;
         this.isLoggedIn = false;
         this.user = "";
         this.domain = config.getString("domain");
         this.mailStorage = mailStorage;
+        this.secureConnection = secureConnection;
+
     }
 
     public List<String> processInput(String input) {
+        input = secureConnection.decrypt(input);
         String trimInput = input.substring(input.indexOf(" ") + 1);
+        List<String> response;
+        List<String> responseEncrypted = new ArrayList<>();
         if (input.startsWith("login"))
-            return login(trimInput);
+            response = login(trimInput);
         else if (input.startsWith("list"))
-            return list();
+            response = list();
         else if (input.startsWith("show"))
-            return show(trimInput);
+            response = show(trimInput);
         else if(input.startsWith("delete"))
-            return delete(trimInput);
+            response = delete(trimInput);
         else if (input.startsWith("logout"))
-            return logout();
+            response = logout();
         else if (input.startsWith("quit"))
-            return quit();
-        else return null;
+            response = quit();
+        else response = null;
+        if(response != null)
+            response.forEach(responseLine -> responseEncrypted.add(secureConnection.encrypt(responseLine)));
+        return responseEncrypted;
     }
 
     private List<String> login(String input) {
@@ -73,18 +81,17 @@ public class MailBoxDMAP {
         }
 
         StringBuilder mails = new StringBuilder();
+        //clear stringbuilder
+        mails.setLength(0);
         for (Map.Entry<Integer, Mail> entry : mailStorage.entrySet()) {
-            //clear stringbuilder
-            mails.setLength(0);
             Mail mail = entry.getValue();
             if (mail.getRecipients().contains(user + "@" + domain)) {
-                mails.append(entry.getKey()).append(" ").append(mail.getSender()).append(" ").append(mail.getSubject()).append("\n");
+                mails.append(entry.getKey()).append(" ").append(mail.getSender()).append(" ").append(mail.getSubject()).append(mail.getData()).append("\n");
                 response.add(mails.toString());
             }
         }
         if (mails.toString().isEmpty())
             response.add("error... There are no messages available!");
-        mails.append("ok");
         return response;
     }
 
@@ -167,4 +174,5 @@ public class MailBoxDMAP {
     private boolean isLoggedIn;
     private String domain;
     private ConcurrentHashMap<Integer, Mail> mailStorage;
+    private SecureConnection secureConnection;
 }

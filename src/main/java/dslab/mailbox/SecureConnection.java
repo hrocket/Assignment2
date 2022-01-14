@@ -22,6 +22,7 @@ public class SecureConnection {
     public SecureConnection(String componentId) {
         this.componentId = componentId;
         this.setUpSecureConnection = false;
+        this.isEncryptedConnection = false;
         this.currentStep = 0;
     }
 
@@ -40,7 +41,7 @@ public class SecureConnection {
         else if (currentStep == 1)
             return challenge(input);
         else if (currentStep == 2)
-            return finalizeSetUp();
+            return finalizeSetUp(decrypt(input));
         else return null;
     }
 
@@ -73,14 +74,17 @@ public class SecureConnection {
         } else {
             throw new SecurityException("Error during reading shared secret key.");
         }
+        this.isEncryptedConnection = true;
         response.add(encrypt(responseString));
         currentStep = 2;
         return response;
     }
 
-    private List<String> finalizeSetUp() {
+    private List<String> finalizeSetUp(String input) {
         List<String> response = new ArrayList<>();
-        this.setUpSecureConnection = false;
+        if (input.equals("ok")) {
+            this.setUpSecureConnection = false;
+        }
         return response;
     }
 
@@ -96,19 +100,39 @@ public class SecureConnection {
     }
 
     public String encrypt(String input) {
-        try {
-            Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(vector));
-            return Base64.getEncoder().encodeToString(cipher.doFinal(input.getBytes("UTF-8")));
-        } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException |
-                UnsupportedEncodingException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException e) {
-            e.printStackTrace();
+        if(isEncryptedConnection) {
+            try {
+                Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(vector));
+                return Base64.getEncoder().encodeToString(cipher.doFinal(input.getBytes("UTF-8")));
+            } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException |
+                    UnsupportedEncodingException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException e) {
+                e.printStackTrace();
+            }
+        } else {
+            return input;
+        }
+        return null;
+    }
+
+    public String decrypt(String input) {
+        if(isEncryptedConnection) {
+            try {
+                Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(vector));
+                return new String(cipher.doFinal(Base64.getDecoder().decode(input)));
+            } catch (Exception e) {
+                System.out.println("Error while decrypting: " + e.toString());
+            }
+        } else {
+            return input;
         }
         return null;
     }
 
     private String componentId;
     private boolean setUpSecureConnection;
+    private boolean isEncryptedConnection;
     private int currentStep;
     private byte[] vector;
     private Key secretKey;

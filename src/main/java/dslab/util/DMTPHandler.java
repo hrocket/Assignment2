@@ -96,7 +96,7 @@ public class DMTPHandler {
 
         } else {
 
-            if ((msg.equals("ok DMTP") || msg.equals("ok"))  && counter == 0) {
+            if ((msg.equals("ok DMTP2.0") || msg.equals("ok"))  && counter == 0) {
 
                 counter++;
                 return "begin";

@@ -54,7 +54,6 @@ public class MessageClient implements IMessageClient, Runnable {
         this.config = config;
         shell = new Shell(in, out);
         shell.register(this);
-        shell.setPrompt(componentId + "> ");
     }
 
     @Override
@@ -95,7 +94,7 @@ public class MessageClient implements IMessageClient, Runnable {
                 String vectorString = new String(vector_encoded, StandardCharsets.UTF_8);
 
                 // Create secret-key
-                KeyGenerator generator = KeyGenerator.getInstance(AES);
+                KeyGenerator generator = KeyGenerator.getInstance("AES");
                 generator.init(256);
                 SecureRandom secRandom = new SecureRandom(this.vector); // TODO: IS THIS EVEN USED ??
                 this.secretKey = generator.generateKey();
@@ -118,7 +117,7 @@ public class MessageClient implements IMessageClient, Runnable {
                 // Load the public-key-specification
                 byte[] publicKeyBinaries = Files.readAllBytes(path);
                 // Create public-key from specification
-                PublicKey publicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(publicKeyBinaries));
+                PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(publicKeyBinaries));
 
                 // Create the client-challenge
                 String msg = "ok " + challengeString + " " + keyString + " " + vectorString;
@@ -137,14 +136,15 @@ public class MessageClient implements IMessageClient, Runnable {
 
                 // If received server challenge does not equal the original challenge string we abort
                 if (!serverChallenge_decrypted.equals(challengeString)) {
-                    this.mailboxConnection.send("ERROR");
+                    this.mailboxConnection.send("ERRORTest");
                     notifyShell("Identity of the Server could not be proven - Be careful !", true);
                 } else {
-                    send("OK");
+                    send("ok");
                 }
 
             } catch (Exception e) {
-                notifyShell("ERROR", true);
+                e.printStackTrace();
+                notifyShell("ERROR123", true);
             }
 
             // Login with the credentials from the config-file
@@ -158,6 +158,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
 
         } catch (Exception e) {
+            e.printStackTrace();
             // bla bla
         }
 
@@ -177,7 +178,7 @@ public class MessageClient implements IMessageClient, Runnable {
             // Convert back to String-format
             return Base64.getEncoder().encodeToString(msg_binary_encrypted);
         } catch (Exception e) {
-            System.out.println("ERROR");
+            System.out.println("ERRORHere");
         }
         return null;
     }
@@ -194,7 +195,7 @@ public class MessageClient implements IMessageClient, Runnable {
             // Convert back to String-format
             return Base64.getEncoder().encodeToString(msg_binary_encrypted);
         } catch (Exception e) {
-            System.out.println("ERROR");
+            System.out.println("ERRORThere");
         }
         return null;
     }
@@ -217,7 +218,8 @@ public class MessageClient implements IMessageClient, Runnable {
             // Convert back to String (Since its text-data we do not need Base64)
             return new String(msg_binary_decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            System.out.println("ERROR");
+            e.printStackTrace();
+            System.out.println("ERROR234");
         }
         return null;
     }
@@ -261,10 +263,11 @@ public class MessageClient implements IMessageClient, Runnable {
             while (true) {
                 response = receive();
                 // Covers the case that the response is either empty or "ok", in this case we are finished
-                if (response.length() <= 2)
+                if (response.startsWith("error"))
                     break;
                 // Store all msg-id's to call show command on them later on
                 ids.add(Integer.parseInt(response.split(" ")[0]));
+                break;
             }
 
             // No id's means no mails in the mailbox of the user, so we can abort
@@ -286,7 +289,7 @@ public class MessageClient implements IMessageClient, Runnable {
             }
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
             shutdown();
         }
     }

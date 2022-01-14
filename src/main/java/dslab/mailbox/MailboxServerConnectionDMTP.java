@@ -25,7 +25,7 @@ public class MailboxServerConnectionDMTP extends Thread {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             System.out.println("Mailbox Thread started.");
-            out.println("ok DMTP");
+            out.println("ok DMTP2.0");
 
             String inputLine, outputLine;
             DMTP mailBoxDMTP = new MailBoxDMTP(this.mailStorage, config);
