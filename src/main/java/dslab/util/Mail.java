@@ -1,10 +1,11 @@
 package dslab.util;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class Mail {
 
-    public Mail (List<String> recipients, String sender, String subject, String data, List<String> domains, String hash) {
+    public Mail (List<String> recipients, String sender, String subject, String data, List<String> domains) {
         this.recipients = recipients;
         this.sender = sender;
         this.subject = subject;
@@ -12,7 +13,15 @@ public class Mail {
         this.domains = domains;
     }
 
+    public Mail (List<String> recipients, String sender, String subject, String data) {
+        this.recipients = recipients;
+        this.sender = sender;
+        this.subject = subject;
+        this.data = data;
+    }
+
     public Mail () {}
+
 
     public List<String> getRecipients() {
         return recipients;
@@ -21,6 +30,8 @@ public class Mail {
     public void setRecipients(List<String> recipients) {
         this.recipients = recipients;
     }
+
+    public void setRecipients(String[] recipients) { this.recipients = Arrays.asList(recipients); }
 
     public String getSender() {
         return sender;
@@ -74,6 +85,13 @@ public class Mail {
                 ", domains=" + domains +
                 ", hash=" + hash +
                 '}';
+    }
+
+    public String toHashFormat() {
+        return sender + "\n"
+                + recipients.toString() + "\n"
+                + subject + "\n"
+                + data;
     }
 
     public String validateMail() {
