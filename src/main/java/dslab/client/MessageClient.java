@@ -2,6 +2,7 @@ package dslab.client;
 
 import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
+import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.util.*;
 
@@ -11,7 +12,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +31,7 @@ public class MessageClient implements IMessageClient, Runnable {
     private Connection mailboxConnection;
     private Connection transferConnection;
 
+    // Predefined constants
     private final String RSA = "RSA/ECB/PKCS1Padding";
     private final String AES = "AES/CTR/NoPadding";
     private final String CHARSET = "UTF8";
@@ -54,35 +55,31 @@ public class MessageClient implements IMessageClient, Runnable {
         shell = new Shell(in, out);
         shell.register(this);
         shell.setPrompt(componentId + "> ");
-
     }
 
     @Override
     public void run() {
-        // get shared secret key for message integrity
+        // Get shared secret key for message integrity
         File sharedKeyFile = new File(SKPATH);
         try {
             sharedKey = Keys.readSecretKey(sharedKeyFile);
         } catch (IOException e) {
-            shell.out().println("error occured while opening shared key file");
+            shell.out().println("Error while accessing KeyFile");
         }
 
-        // setup mailbox socket
+        // Setup mailbox-connection
         String mailboxHost = config.getString("mailbox.host");
         String mailboxUser = config.getString("mailbox.user");
         String mailboxPassword = config.getString("mailbox.password");
         int mailboxPort = config.getInt("mailbox.port");
+
         try {
             this.mailboxConnection = new Connection(new Socket(mailboxHost, mailboxPort));
 
-            // ok DMAP2.0
             String response = this.mailboxConnection.readLine();
             if (!response.equals("ok DMAP2.0")) {
-                shell.out().println("expected mailbox server to know DMAP2.0!");
-                shell.out().flush();
-                shutdown();
+                notifyShell("Mailboxserver does not recognize DMAP2.0", true);
             }
-
 
             try {
                 // Create challenge & vector from random binaries
@@ -91,7 +88,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
                 // Encode challenge & vector
                 byte[] challenge_encoded = Base64.getEncoder().encode(challenge);
-                byte[] vector_encoded = Base64.getEncoder().encode(vector);
+                byte[] vector_encoded = Base64.getEncoder().encode(this.vector);
 
                 // Convert to String
                 String challengeString = new String(challenge_encoded, StandardCharsets.UTF_8);
@@ -100,12 +97,11 @@ public class MessageClient implements IMessageClient, Runnable {
                 // Create secret-key
                 KeyGenerator generator = KeyGenerator.getInstance(AES);
                 generator.init(256);
-                SecureRandom secRandom = new SecureRandom(vector);
-                secretKey = generator.generateKey();
+                SecureRandom secRandom = new SecureRandom(this.vector); // TODO: IS THIS EVEN USED ??
+                this.secretKey = generator.generateKey();
 
-                // Encode secret-key
+                // Convert encoded secret-key to string
                 byte[] secretKey_encoded = Base64.getEncoder().encode(secretKey.getEncoded());
-                // Convert secret-key to string
                 String keyString = new String(secretKey_encoded, StandardCharsets.UTF_8);
 
                 // Start sending
@@ -124,7 +120,7 @@ public class MessageClient implements IMessageClient, Runnable {
                 // Create public-key from specification
                 PublicKey publicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(publicKeyBinaries));
 
-                // Create the message
+                // Create the client-challenge
                 String msg = "ok " + challengeString + " " + keyString + " " + vectorString;
                 // Encrypt the message
                 String rsaMsg_encrypted = encrypt(msg, publicKey);
@@ -134,34 +130,30 @@ public class MessageClient implements IMessageClient, Runnable {
 
                 this.mailboxConnection.send(rsaMsg_encrypted);
 
-                //Check if challenge is received
+                // Receive & decrypt the challenge
                 String serverChallenge_encrypted = this.mailboxConnection.readLine();
-                // Decrypt
                 String serverChallenge_decrypted = decrypt(serverChallenge_encrypted);
                 serverChallenge_decrypted = serverChallenge_decrypted.split(" ")[1];
 
+                // If received server challenge does not equal the original challenge string we abort
                 if (!serverChallenge_decrypted.equals(challengeString)) {
                     this.mailboxConnection.send("ERROR");
-                    shell.out().println("couldn't recognize Server based on challenge");
-                    shell.out().flush();
-                    shutdown();
+                    notifyShell("Identity of the Server could not be proven - Be careful !", true);
+                } else {
+                    send("OK");
                 }
 
-                send("OK");
-
-
             } catch (Exception e) {
-                shell.out().println("error while setting up secure connection: " + e.getMessage());
-                shell.out().flush();
-                shutdown();
+                notifyShell("ERROR", true);
             }
 
+            // Login with the credentials from the config-file
             send("login " + mailboxUser + " " + mailboxPassword);
             response = receive();
+
+
             if (!response.equals("ok")) {
-                shell.out().println("error while logging in");
-                shell.out().flush();
-                shutdown();
+                notifyShell("ERROR: Login failed", true);
             }
 
 
@@ -207,6 +199,12 @@ public class MessageClient implements IMessageClient, Runnable {
         return null;
     }
 
+    /**
+     *
+     *
+     * @param msg
+     * @return
+     */
     public String decrypt(String msg) {
         try {
             // Set up the cipher
@@ -224,75 +222,84 @@ public class MessageClient implements IMessageClient, Runnable {
         return null;
     }
 
+    /**
+     * Encrypts the message and sends it to the mailbox-server
+     *
+     * @param msg to be send to the mailbox-server
+     */
     public void send(String msg) {
         // encrypt before sending
         String msg_encrypted = encrypt(msg);
         this.mailboxConnection.send(msg_encrypted);
     }
 
+    /**
+     * Reads an encrypted message from the connection to the mailbox-server, decrypts and returns it
+     *
+     * @return the decrypted message
+     */
     public String receive() {
         try {
             String msg_encrypted = this.mailboxConnection.readLine();
             // decrypt after receiving
             return decrypt(msg_encrypted);
         } catch (Exception e) {
-            shell.out().println("Exception while receiving message:" + e.getMessage());
-            shell.out().flush();
-            shutdown();
+            notifyShell("Receiving the message failed", true);
             return null;
         }
     }
 
+    @Command
     @Override
     public void inbox() {
         try {
 
-            // List
+            // Send list-command
             send("list");
             String response = "";
             ArrayList<Integer> ids = new ArrayList<>();
             while (true) {
                 response = receive();
+                // Covers the case that the response is either empty or "ok", in this case we are finished
                 if (response.length() <= 2)
                     break;
+                // Store all msg-id's to call show command on them later on
                 ids.add(Integer.parseInt(response.split(" ")[0]));
             }
 
-            // Show
+            // No id's means no mails in the mailbox of the user, so we can abort
+            if (ids.size() == 0) {
+                notifyShell("There are no mails in your mailbox", false);
+                return;
+            }
+
+            // Send show-command
             for (int id : ids) {
                 send("show " + id);
                 while (true) {
                     response = receive();
+                    // No more mails available
                     if (response.equals("ok"))
                         break;
-                    shell.out().println(response);
-                    shell.out().flush();
+                    notifyShell(response, false);
                 }
             }
 
-            if (ids.size() == 0) {
-                shell.out().println("Your inbox is currently empty.");
-                shell.out().flush();
-            }
-
-
         } catch (Exception e) {
-            System.out.println("SocketException while handling socket: " + e.getMessage());
+            System.out.println(e.getMessage());
             shutdown();
         }
     }
 
+    @Command
     @Override
     public void delete(String id) {
-
         send("delete " + id);
         String response = receive();
-
-        shell.out().println(response);
-        shell.out().flush();
-
+        notifyShell(response, false);
     }
 
+    @Command
     @Override
     public void verify(String id) {
         try {
@@ -306,36 +313,42 @@ public class MessageClient implements IMessageClient, Runnable {
                 if (response.equals("error protocol error")) return;
             }
             Mail mail = dmtpHandler.getMail();
+            // Hash-Magic
             Mac hashMac = Mac.getInstance(MAC);
             hashMac.init(this.secretKey);
             hashMac.update(mail.toHashFormat().getBytes());
             byte[] computedHash = hashMac.doFinal();
             byte[] receivedHash = Base64.getDecoder().decode(mail.getHash().getBytes());
+            // Compare the Hashes
             boolean valid = MessageDigest.isEqual(computedHash, receivedHash);
-            shell.out().println(valid ? "ok" : "error");
-            shell.out().flush();
-        } catch (Exception e) {
-            // do
+            notifyShell(valid ? "ok" : "error", false);
+        } catch (NoSuchAlgorithmException e) {
+            notifyShell("Selected algorithm could not be found", false);
+        } catch (InvalidKeyException e) {
+            notifyShell("No valid key was provided for HMAC", false);
         }
     }
 
+    @Command
     @Override
     public void msg(String to, String subject, String data) {
+        // Set up
         String from = config.getString("transfer.email");
         String transferHost = config.getString("transfer.host");
         int transferPort = config.getInt("transfer.port");
         try {
 
+            // Set up
             this.transferConnection = new Connection(new Socket(transferHost, transferPort));
             Mail mail = calculateHash(from, to, subject, data);
-
             DMTPHandler dmtpHandler = new DMTPHandler();
+            // Store commands in an array, so we can iterate properly
             String[] fields = {"begin", "from " + from, "to " + to, "subject " + subject,
                     "data " + data, "hash " + mail.getHash(), "send"};
-
             int counter = 0;
             String response;
 
+            // Send commands one by one, we stop as soon as an error occurs
             do {
                 this.transferConnection.send(fields[counter++]);
                 response = this.transferConnection.readLine();
@@ -343,8 +356,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
             // Counter increases for each field, if he is not equal to the number of fields, it means that an error has occured
             if (counter < (fields.length - 1)) {
-                shell.out().println("DMTP2.0 Error while sending Mail!");
-                shell.out().flush();
+                notifyShell("Protocol-Error occured while sending the mail", false);
                 return;
             }
 
@@ -356,6 +368,18 @@ public class MessageClient implements IMessageClient, Runnable {
         }
     }
 
+    /**
+     *
+     * @param from sender of the mail
+     * @param to recipient of the mail
+     * @param subject subject of the mail
+     * @param data main-body of the mail
+     *
+     * @return A Mail object with all the parameter from this function-call + its hash value
+     *
+     * @throws NoSuchAlgorithmException if the Algorithm we are looking for could not be found (in this case: HmacSHA256)
+     * @throws InvalidKeyException if the secret key is not valid
+     */
     private Mail calculateHash(String from, String to, String subject, String data) throws NoSuchAlgorithmException, InvalidKeyException {
         // calculate hash:
         String hash = "";
@@ -370,6 +394,7 @@ public class MessageClient implements IMessageClient, Runnable {
         return mail;
     }
 
+    @Command
     @Override
     public void shutdown() {
         try {
@@ -385,6 +410,20 @@ public class MessageClient implements IMessageClient, Runnable {
         }
         shell.out().println("Exiting the shell, bye!");
         throw new StopShellException();
+    }
+
+    /**
+     * Sends the msg over the outputstream of the shell and calls shutdown() depending on the shutdown parameter.
+     *
+     * @param msg to be send over the outputstream of the shell
+     * @param shutdown flag to determine weather the system should perform a shutdown
+     */
+    private void notifyShell(String msg, boolean shutdown){
+        shell.out().println(msg);
+        shell.out().flush();
+        if(shutdown){
+            shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {
